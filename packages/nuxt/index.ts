@@ -47,6 +47,12 @@ export interface VueUseNuxtOptions {
    * @default false
    */
   ssrHandlers?: boolean
+
+  /**
+   * @experimental
+   * @default false
+   */
+  ssrWidthDetection?: boolean
 }
 
 /**
@@ -87,11 +93,26 @@ export default defineNuxtModule<VueUseNuxtOptions>({
     nuxt.options.build.transpile = nuxt.options.build.transpile || []
     nuxt.options.build.transpile.push(...fullPackages)
 
-    if (options.ssrHandlers) {
-      const pluginPath = resolve(_dirname, './ssr-plugin.mjs')
+    function addPlugin(pluginPath: string) {
       nuxt.options.plugins = nuxt.options.plugins || []
       nuxt.options.plugins.push(pluginPath)
       nuxt.options.build.transpile.push(pluginPath)
+    }
+
+    if (options.ssrHandlers) {
+      addPlugin(resolve(_dirname, './ssr-plugin.mjs'))
+    }
+
+    if (options.ssrWidthDetection) {
+      nuxt.options.routeRules = nuxt.options.routeRules || {}
+      nuxt.options.routeRules['/**'] = nuxt.options.routeRules['/**'] || {}
+      nuxt.options.routeRules['/**'].headers = nuxt.options.routeRules['/**'].headers || {}
+      nuxt.options.routeRules['/**'].headers['Accept-CH'] = nuxt.options.routeRules['/**'].headers['Accept-CH'] || ''
+      if (!nuxt.options.routeRules['/**'].headers['Accept-CH'].match(/viewport-width/i)) {
+        nuxt.options.routeRules['/**'].headers['Accept-CH'] += `${nuxt.options.routeRules['/**'].headers['Accept-CH'].length > 0 ? ',' : ''}Viewport-Width`
+      }
+
+      addPlugin(resolve(_dirname, './ssr-width-plugin.mjs'))
     }
 
     // @ts-expect-error - private API
